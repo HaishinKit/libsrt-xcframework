@@ -1,0 +1,5 @@
+lane :build do
+  Dir.chdir("..") do
+    sh("./build-clone.sh")
+  end
+end
