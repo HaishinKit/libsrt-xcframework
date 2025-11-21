@@ -36,5 +36,19 @@ The checksum can be obtained using the following command:
 $ swift package compute-checksum /path/to/libsrt.xcframework.zip
 ```
 
+## build xcframework
+```sh
+## clone dependencies
+$ build-clone.sh
+
+## build libsrt.a
+$ build-ios.sh
+# $ build-macos.sh ...
+
+## make xcframework. only succeeds when the build for all platforms is successful.
+## If you only need iOS, please comment out the contents of the .sh file.
+$ build-xcframework.sh
+```
+
 ## License
 - libsrt.xcframeworks is MPLv2.0 License
