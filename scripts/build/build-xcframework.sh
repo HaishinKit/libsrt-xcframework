@@ -34,7 +34,9 @@ xcodebuild -create-xcframework \
     -output libsrt.xcframework
 
 
+python3 scripts/source-distribution.py package
 mkdir -p libsrt.xcframework/Licenses
+cp dist/licensing/THIRD-PARTY-LICENSES.txt dist/licensing/SOURCE-NOTICE.txt dist/licensing/SOURCES.json libsrt.xcframework/Licenses/
 cp srt/LICENSE libsrt.xcframework/Licenses/SRT-LICENSE
 cat > libsrt.xcframework/DEPENDENCIES.json <<'EOF'
 {
@@ -51,3 +53,5 @@ rm -f libsrt.xcframework.zip
 COPYFILE_DISABLE=1 /usr/bin/zip -qry libsrt.xcframework.zip libsrt.xcframework
 swift package compute-checksum libsrt.xcframework.zip > libsrt.xcframework.zip.sha256
 cat libsrt.xcframework.zip.sha256
+
+python3 scripts/source-distribution.py seal

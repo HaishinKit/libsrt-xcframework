@@ -30,7 +30,7 @@ with tempfile.TemporaryDirectory() as name:
     assert manifest == (work / 'dist/Package.swift').read_text()
     run('check', 'v1.5.7')
     run('check-local', succeeds=False)
-    run('check', 'v0.24.7', succeeds=False)
+    run('check', 'v1.5.8', succeeds=False)
     archive.write_bytes(b'changed artifact')
     run('check', 'v1.5.7', succeeds=False)
     run('release', 'v1.5.7')
@@ -54,6 +54,7 @@ with tempfile.TemporaryDirectory() as name:
     (work / 'libsrt.xcframework.zip').write_bytes(b'publish fixture')
     subprocess.run(['bash', 'build.sh', 'release', 'v1.5.7'], cwd=work, check=True,
                    stdout=subprocess.DEVNULL)
+    (work / 'scripts/source-distribution.py').write_text('# Source validation is covered separately.\n')
     git = work / 'bin/git'
     git.write_text('''#!/bin/bash
 case "$1" in
@@ -75,5 +76,7 @@ esac
     args = (work / 'gh-arguments').read_text().splitlines()
     assert args[:3] == ['release', 'create', 'v1.5.7']
     assert '--verify-tag' in args
-    assert args[-2:] == ['libsrt.xcframework.zip', 'libsrt.xcframework.zip.sha256']
+    assert args[-7:] == ['libsrt.xcframework.zip', 'libsrt.xcframework.zip.sha256',
+        'dist/licensing/THIRD-PARTY-LICENSES.txt', 'dist/licensing/SOURCE-NOTICE.txt',
+        'dist/licensing/SOURCES.json', 'dist/licensing/libsrt-sources.zip', 'dist/licensing/SHA256SUMS.json']
 print('Publish preflight and upload arguments verified with isolated Git/GitHub stubs.')

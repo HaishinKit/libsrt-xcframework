@@ -54,6 +54,7 @@ jobs:
           ./build.sh verify
           python3 tests/verify-release.py
           python3 tests/verify-ci-release.py
+          python3 tests/verify-source-distribution.py
           xcodebuild -scheme libsrt -destination 'generic/platform=watchOS' \
             -derivedDataPath build/watchos-package CODE_SIGNING_ALLOWED=NO build
 
@@ -74,6 +75,7 @@ jobs:
             libsrt.xcframework.zip
             libsrt.xcframework.zip.sha256
             dist/Package.swift
+            dist/licensing/
           if-no-files-found: error
           retention-days: 30
           compression-level: 0
