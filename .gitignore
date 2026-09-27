@@ -1,3 +1,14 @@
 fastlane/report.xml
 /OpenSSL
+/openssl-src/
 /srt
+
+/build/
+/Includes/
+/libsrt.xcframework/
+/libsrt.xcframework.zip
+/libsrt.xcframework.zip.sha256
+
+/.build/
+/.swiftpm/
+/dist/
