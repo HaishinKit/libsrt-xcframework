@@ -58,6 +58,12 @@ def verify(item):
             ['xcrun', 'otool', '-l', '-arch', arch, str(directory/'libsrt.a')], text=True)
         actual_platforms = {int(value) for value in re.findall(r'^\s+platform (\d+)$', load_commands, re.MULTILINE)}
         assert actual_platforms == {platforms[name]}, (name, arch, actual_platforms)
+        # Static archives carry DWARF into the consuming application's dSYM.
+        debug_info = subprocess.check_output(
+            ['xcrun', 'dwarfdump', '--debug-info', '--recurse-depth=0',
+             '--arch=' + arch, str(directory/'libsrt.a')], text=True)
+        units = debug_info.split('DW_TAG_compile_unit')[1:]
+        assert units and all('DW_AT_stmt_list' in unit for unit in units), (name, arch, 'missing DWARF line information')
         definitions = subprocess.check_output(['xcrun', 'nm', '-arch', arch, '-gU', str(directory/'libsrt.a')], text=True)
         assert not re.search(r'\b_(?:SSL_|OPENSSL_|OpenSSL_|EVP_|CRYPTO_|RAND_)', definitions), name + ': bundled OpenSSL symbols'
         assert ('OpenSSL '+os.environ.get('EXPECTED_OPENSSL_VERSION', '3.3.3')).encode() in (dependency(name)/'OpenSSL.framework/OpenSSL').read_bytes(), name + ': OpenSSL version mismatch'

@@ -90,6 +90,23 @@ Set `CMAKE=/path/to/cmake` and `JOBS=8` as needed. When changing toolchains,
 start with a clean `build/` directory and run the preparation step again.
 Legacy `OpenSSL/`, `openssl-src/`, and `build/openssl/` directories are unused.
 
+## Debug symbols
+
+Builds from this revision use `-O3 -DNDEBUG -g` for C and C++, retaining
+Release optimization and embedding DWARF debug information in `libsrt.a`.
+This applies to all platforms.
+The release checks require DWARF compilation units with line-table references
+in every architecture of the packaged XCFramework. Previously published
+release assets are unchanged; this takes effect in the next release.
+
+These static libraries do not ship a standalone dSYM. Archive the consuming
+application with **Debug Information Format = DWARF with dSYM File**, preserve
+its matching dSYM, and upload it to Firebase Crashlytics. The final app dSYM
+must contain the linked library's debug information; merely updating the
+package does not configure symbol uploads. Optimization can still affect
+inlining and source-line accuracy. OpenSSL's separate upstream dSYM and its
+limitations described above are unchanged.
+
 ## Swift Package Manager
 
 After publishing with the workflow below, consumers can use this repository's
