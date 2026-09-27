@@ -1,0 +1,98 @@
+name: Release XCFramework
+run-name: Release libsrt ${{ inputs.version }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Package release version (e.g. 1.5.7; source version is pinned in the repository)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: libsrt-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.repository == 'HaishinKit/libsrt-xcframework' && github.ref == 'refs/heads/main'
+    runs-on: macos-26
+    timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ github.token }}
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      JOBS: '3'
+    steps:
+      - name: Check out the selected source commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.sha }}
+
+      - name: Validate version and reject existing tags/releases
+        id: version
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: python3 scripts/ci-release.py
+
+      - name: Set up the tested CMake version
+        run: |
+          python3 -m venv "$RUNNER_TEMP/cmake-venv"
+          "$RUNNER_TEMP/cmake-venv/bin/python" -m pip install 'cmake==3.31.10'
+          echo "CMAKE=$RUNNER_TEMP/cmake-venv/bin/cmake" >> "$GITHUB_ENV"
+          xcodebuild -version
+          test "$(uname -m)" = arm64
+
+      - name: Build all platforms
+        run: ./build.sh
+
+      - name: Verify frameworks and release tooling
+        run: |
+          ./build.sh verify
+          python3 tests/verify-release.py
+          python3 tests/verify-ci-release.py
+          xcodebuild -scheme libsrt -destination 'generic/platform=watchOS' \
+            -derivedDataPath build/watchos-package CODE_SIGNING_ALLOWED=NO build
+
+      - name: Generate the release manifest
+        env:
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          ./build.sh release "$RELEASE_TAG"
+          python3 scripts/release-manifest.py check "$RELEASE_TAG"
+          swift package dump-package > "$RUNNER_TEMP/release-package.json"
+
+      # Keep the exact ZIP for recovery if publication fails after creating the tag.
+      - name: Save release files for recovery
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-${{ steps.version.outputs.tag }}
+          path: |
+            libsrt.xcframework.zip
+            libsrt.xcframework.zip.sha256
+            dist/Package.swift
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+
+      - name: Commit the manifest and push the release tag
+        env:
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          bash scripts/commit-release.sh "$RELEASE_TAG"
+          git push origin "refs/tags/$RELEASE_TAG"
+
+      - name: Publish the GitHub Release
+        env:
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        run: ./build.sh publish "$RELEASE_TAG"
+
+      - name: Show release URL
+        env:
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        run: echo "Published https://github.com/HaishinKit/libsrt-xcframework/releases/tag/$RELEASE_TAG" >> "$GITHUB_STEP_SUMMARY"

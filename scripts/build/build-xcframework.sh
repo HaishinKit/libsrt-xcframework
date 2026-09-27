@@ -7,7 +7,7 @@
 # LICENSE file in the root directory of this source tree.
 
 set -euo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/../.."
 
 rm -rf Includes
 mkdir -p Includes/libsrt

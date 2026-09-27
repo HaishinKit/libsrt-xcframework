@@ -8,7 +8,7 @@
 
 # Shared static-library build. Requires CMake 3.28+ and Xcode.
 set -euo pipefail
-cd "$(dirname "${BASH_SOURCE[0]}")"
+cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 ROOT=$(pwd)
 CMAKE=${CMAKE:-cmake}
 # Headers adapted from the exact, signed SwiftPM artifact.

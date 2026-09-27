@@ -1,4 +1,3 @@
-fastlane/report.xml
 /OpenSSL
 /openssl-src/
 /srt
@@ -12,3 +11,5 @@ fastlane/report.xml
 /.build/
 /.swiftpm/
 /dist/
+
+/Package.resolved
