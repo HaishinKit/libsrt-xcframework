@@ -46,7 +46,7 @@ with tempfile.TemporaryDirectory() as name:
         (work/folder).mkdir()
     for file in ['scripts/commit-release.sh','scripts/release-manifest.py','support/Package.swift']:
         shutil.copyfile(root/file, work/file)
-    (work/'.gitignore').write_text('/dist/\n/*.zip\n/*.sha256\n')
+    shutil.copyfile(root/'.gitignore', work/'.gitignore')
     (work/'README.md').write_text('source\n')
     (work/'libsrt.xcframework.zip').write_bytes(b'fixture artifact')
     run('python3','scripts/release-manifest.py','local')
@@ -58,6 +58,10 @@ with tempfile.TemporaryDirectory() as name:
     source = run('git','rev-parse','HEAD')
     run('git','checkout','--detach')
     run('python3','scripts/release-manifest.py','release','v1.5.7')
+    # Reproduce the bytecode left by the source-distribution verification import.
+    run('python3','-c', "import py_compile; py_compile.compile('scripts/release-manifest.py', "
+        "cfile='scripts/__pycache__/release-manifest.pyc', doraise=True)")
+    assert list((work/'scripts/__pycache__').glob('*.pyc'))
     (work/'README.md').write_text('unexpected modification\n')
     run('bash','scripts/commit-release.sh','v1.5.7',succeeds=False)
     assert run('git','rev-parse','HEAD') == source
