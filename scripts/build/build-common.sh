@@ -28,6 +28,7 @@ build_srt() {
   local build="$ROOT/build/$output"
   local target=${7:-}
   local arch=${8:-arm64}
+  python3 scripts/source-distribution.py record "$build/source-before.json"
   "$CMAKE" -S "$ROOT/srt" -B "$build" \
     -DCMAKE_SYSTEM_NAME="$system" \
     -DCMAKE_OSX_SYSROOT="$(xcrun --sdk "$sdk" --show-sdk-path)" \
@@ -47,4 +48,6 @@ build_srt() {
   # OpenSSL remains external. Only SRT objects belong in this artifact.
   mkdir -p "$(dirname "$ROOT/build/$merged")"
   cp "$build/libsrt.a" "$ROOT/build/$merged"
+  python3 scripts/source-distribution.py record "$build/SOURCES.json"
+  cmp "$build/source-before.json" "$build/SOURCES.json"
 }

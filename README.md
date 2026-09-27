@@ -120,7 +120,19 @@ app archive includes its Privacy Manifest and required framework resources.
 
 The same repository holds the build scripts, Swift package, version tags, and
 GitHub Release assets. The build creates `libsrt.xcframework`, its ZIP,
-and a `.sha256` file, including bundled-component licenses and metadata.
+and a `.sha256` file. Additional release assets are generated in `dist/licensing/`:
+
+- `THIRD-PARTY-LICENSES.txt`: MPL text and original source notices, including UDT's BSD notice and MD5 notices.
+- `SOURCE-NOTICE.txt`: source availability, revision URL, and modification status.
+- `SOURCES.json`: source version/commit and the explicitly excluded development tool.
+- `libsrt-sources.zip`: exact tracked SRT sources, original notices and upstream build files.
+- `SHA256SUMS.json`: checksums linking these assets to the binary ZIP.
+
+The first three files are also inside `libsrt.xcframework/Licenses/`, alongside
+the existing `SRT-LICENSE`. Both Actions and `./build.sh publish TAG` upload all
+five additional assets. The optional `abi-compliance-checker` submodule is not
+used for this build and is excluded; its commit and reason are recorded.
+OpenSSL is distributed separately through OpenSSL-Package.
 
 ### Release from GitHub Actions (recommended)
 
@@ -147,10 +159,12 @@ access token or signing secret is needed for this static XCFramework. Repository
 or organization rules must allow Actions to create release tags and releases.
 
 Before pushing the tag, the workflow saves a `release-vVERSION` artifact for
-30 days containing the exact ZIP, checksum, and generated manifest. If publication
+30 days containing the exact binary ZIP, checksum, generated manifest and
+source/license assets. If publication
 fails after the tag was pushed, do **not** rebuild or move the tag: download that
 artifact, check out the existing tag, restore the ZIP/checksum at the repository
-root, and run `./build.sh publish TAG`. If a draft or partial Release already
+root, restore all five source/license assets under `dist/licensing/`, and run
+`./build.sh publish TAG`. If a draft or partial Release already
 exists, inspect and complete it using the saved files rather than rerunning the
 whole workflow or overwriting published assets.
 
@@ -170,7 +184,7 @@ whole workflow or overwriting published assets.
    ```
 
 4. From that commit, run `./build.sh publish v1.5.7` to upload the ZIP and its
-   checksum file to this repository's GitHub Releases. This requires an
+   checksum file and source/license assets to this repository's GitHub Releases. This requires an
    authenticated GitHub CLI (`gh`).
 
 `release` only prepares local files; `publish` is the explicit upload step.
@@ -193,6 +207,7 @@ committing its new checksum before tagging.
 ./build.sh verify
 python3 tests/verify-release.py
 python3 tests/verify-ci-release.py
+python3 tests/verify-source-distribution.py
 ```
 
 
@@ -223,7 +238,35 @@ For cross-version linkage and encrypted runtime checks against another
 extracted upstream artifact, set `OPENSSL_XCFRAMEWORK` and
 `EXPECTED_OPENSSL_VERSION` when running `tests/verify-build.py`.
 
-## License
+## License and app redistribution
+
+Every architecture records its source revision before and after building.
+Packaging requires a clean upstream checkout and matching records for all
+architectures. After changing the source revision, rebuild all platforms before
+packaging. Intentional local source changes require extending this process to
+ship the modified sources with an accurate modification notice; they must not
+be labeled as unmodified.
+
+For apps distributing libsrt:
+
+1. Preserve `THIRD-PARTY-LICENSES.txt` and `SOURCE-NOTICE.txt` in user-accessible
+   app resources or accompanying documentation, such as an **Open Source
+   Licenses** screen. Include the release URL for the version shipped, where
+   its `libsrt-sources.zip` is available.
+2. Preserve SRT's MPL source-availability notice and the original UDT/MD5 notices.
+   Exact source revision URLs are in the notice, and the source ZIP retains
+   the original headers and licenses.
+3. Include the license and applicable notices for the actual resolved OpenSSL
+   version separately. Different apps can resolve different OpenSSL 3.x
+   releases; this source ZIP does not contain OpenSSL. Preserve its Privacy
+   Manifest as described above.
+
+SwiftPM does not automatically copy the top-level XCFramework `Licenses/`
+folder into the final app. Verify that your app packaging includes the notices.
+MPL's source requirements concern covered code and modifications, not automatic
+publication of your entire application's source. See the
+[Mozilla MPL FAQ](https://www.mozilla.org/en-US/MPL/2.0/FAQ/) and the license texts.
+
 
 SRT is MPL-2.0; its license is included in the XCFramework. OpenSSL is separately
 distributed under Apache-2.0 with its own license notices. Applications must

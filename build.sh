@@ -50,6 +50,7 @@ case "$command" in
     tests/verify-package.sh ;;
   release) python3 scripts/release-manifest.py release "${2:?Provide a release tag}" ;;
   publish)
+    python3 scripts/source-distribution.py check
     tag=${2:?Provide a release tag}
     python3 scripts/release-manifest.py check "$tag"
     [ -z "$(git status --porcelain)" ] || { echo 'Commit changes before publishing.' >&2; exit 1; }
@@ -60,7 +61,9 @@ case "$command" in
     remote_commit=$(printf '%s\n' "$remote_tag" | awk 'NR == 1 {commit=$1} /\^\{\}$/ {commit=$1} END {print commit}')
     [ "$remote_commit" = "$head" ] || { echo 'Push the release tag to GitHub before publishing.' >&2; exit 1; }
     gh release create "$tag" --repo HaishinKit/libsrt-xcframework --verify-tag \
-      --title "$tag" --generate-notes libsrt.xcframework.zip libsrt.xcframework.zip.sha256 ;;
+      --title "$tag" --generate-notes libsrt.xcframework.zip libsrt.xcframework.zip.sha256 \
+      dist/licensing/THIRD-PARTY-LICENSES.txt dist/licensing/SOURCE-NOTICE.txt \
+      dist/licensing/SOURCES.json dist/licensing/libsrt-sources.zip dist/licensing/SHA256SUMS.json ;;
   help|-h|--help) usage ;;
   *) usage >&2; exit 2 ;;
 esac
