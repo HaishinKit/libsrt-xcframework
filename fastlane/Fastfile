@@ -1,5 +1,0 @@
-lane :build do
-  Dir.chdir("..") do
-    sh("./build.sh prepare")
-  end
-end
