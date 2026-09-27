@@ -10,14 +10,37 @@ This project is maintained for HaishinKit and can also be used independently.
 |---|---|---|---|---|---|
 | 13.0+ | 13.0+ | 11.0+ | 1.3+ | 14.0+ (macOS 11+) | 8.0+ (arm64_32 / armv7k) / 26.0+ (arm64) |
 
-SRT includes ten slices and twelve architecture variants. watchOS devices
-use a universal arm64 + arm64_32 + armv7k library; the watchOS simulator is arm64 with
-an 8.0 minimum. The other platforms are arm64; iOS and tvOS simulators require
-14.0+. Intel slices are not included. The visionOS minimum follows
-the dependency's SwiftPM manifest. Xcode 26 requires a 26.0 deployment target
-for the watchOS arm64 device ABI; arm64_32 and armv7k retain the older deployment target.
-watchOS has been cross-compiled and link-tested; on-watch runtime/networking
-and application archive validation remain to be performed.
+SRT includes ten slices and twelve architecture variants. Platforms other than
+watchOS use arm64; iOS and tvOS simulators require 14.0+. Intel slices are not
+included. The visionOS minimum follows the dependency's SwiftPM manifest.
+
+### watchOS support
+
+The **libsrt XCFramework itself** includes watchOS device and simulator builds,
+in addition to the watchOS support provided by OpenSSL-Package.
+
+| Target | Architecture | Minimum watchOS |
+|---|---|---|
+| Device | arm64_32 | 8.0 |
+| Device | armv7k | 8.0 |
+| Device | arm64 | 26.0 |
+| Simulator | arm64 | 8.0 |
+
+The three device architectures share one universal library. Xcode 26 requires
+watchOS 26.0 for the full arm64 device ABI; arm64_32 and armv7k retain the
+watchOS 8.0 deployment target. The Swift package declares watchOS 8.0 support.
+
+After preparing the dependencies, run `./build-watchos.sh` to build all four
+watchOS variants. Run `./build-xcframework.sh` after building the other
+platforms to include them in the final distribution. See [Build locally](#build-locally)
+for the complete sequence.
+
+All four watchOS variants passed Swift compilation and linking with OpenSSL
+3.3.3 and 3.6.3. The SwiftPM product also built successfully in Xcode for a
+generic watchOS device destination with code signing disabled.
+**Watch device/simulator execution, on-watch networking, and application
+archive validation have not been tested.** The encrypted runtime checks in
+this repository run on macOS and Mac Catalyst.
 
 ## OpenSSL dependency
 
