@@ -30,8 +30,8 @@ The three device architectures share one universal library. Xcode 26 requires
 watchOS 26.0 for the full arm64 device ABI; arm64_32 and armv7k retain the
 watchOS 8.0 deployment target. The Swift package declares watchOS 8.0 support.
 
-After preparing the dependencies, run `./build-watchos.sh` to build all four
-watchOS variants. Run `./build-xcframework.sh` after building the other
+After preparing the dependencies, run `./build.sh build watchos` to build all four
+watchOS variants. Run `./build.sh package` after building the other
 platforms to include them in the final distribution. See [Build locally](#build-locally)
 for the complete sequence.
 
@@ -57,7 +57,7 @@ recommendation to deploy an old OpenSSL release. Tests cover the lower bound
 and package 3.6.3000 (OpenSSL 3.6.3). Use the canonical URL
 `https://github.com/krzyzanowskim/OpenSSL-Package.git` for other consumers too.
 Do not combine this package with a libsrt/libdatachannel artifact that embeds
-another copy of OpenSSL. libdatachannel has not been migrated in this change.
+another copy of OpenSSL. Use the migrated libdatachannel package when sharing OpenSSL with it.
 The earlier sibling `openssl-xcframework` project is no longer required.
 
 The upstream 3.6.3000 iOS dSYM inspected has a matching binary UUID,
@@ -70,16 +70,14 @@ configure their Crashlytics upload workflow for the shipped framework's dSYM.
 Requires Xcode with the platform SDKs, Python 3, and CMake 3.28+:
 
 ```sh
-./build-clone.sh
-python3 scripts/prepare-openssl.py
-./build-ios.sh
-./build-tvos.sh
-./build-macos.sh
-./build-maccatalyst.sh
-./build-visionos.sh
-./build-watchos.sh
-./build-xcframework.sh
+./build.sh                  # Prepare, build every platform, package, select local manifest
+./build.sh verify           # Link/runtime checks and SwiftPM consumer
 ```
+
+The only root build entry point is `build.sh`; implementation scripts live in
+`scripts/build/`. Individual steps are available as `prepare`, `build [platform]`,
+`package`, and `local`. Platforms are `ios`, `tvos`, `macos`, `maccatalyst`,
+`visionos`, and `watchos`. Run `./build.sh help` for the full command list.
 
 The preparation script downloads the exact upstream ZIP to `build/dependencies`,
 checks its SHA-256 and code signature, and creates CMake-compatible header
@@ -94,18 +92,23 @@ Legacy `OpenSSL/`, `openssl-src/`, and `build/openssl/` directories are unused.
 
 ## Swift Package Manager
 
-Add this directory as a local package. The `libsrt` product includes a source
-wrapper that declares OpenSSL-Package and the C++ runtime. Application code
-keeps using `import libsrt`.
+After publishing with the workflow below, consumers can use this repository's
+URL and version without specifying a checksum. The `libsrt` product carries
+OpenSSL-Package and the C++ runtime; application code uses `import libsrt`.
 
 ```swift
-dependencies: [.package(path: "../libsrt-xcframework")],
+dependencies: [
+    .package(url: "https://github.com/HaishinKit/libsrt-xcframework.git", exact: "1.5.7")
+],
 targets: [
     .target(name: "MyApp", dependencies: [
         .product(name: "libsrt", package: "libsrt-xcframework")
     ])
 ]
 ```
+
+Publish the version and its ZIP before using the example. For local development,
+run `./build.sh local` after building and use `.package(path: "../libsrt-xcframework")`.
 
 If declaring the libsrt binary target directly, add the OpenSSL product to the
 consuming source target and link the C++ runtime. Binary targets cannot declare
@@ -115,21 +118,83 @@ app archive includes its Privacy Manifest and required framework resources.
 
 ## Distribution
 
-Outputs are `libsrt.xcframework`, `libsrt.xcframework.zip`, and its `.sha256`.
-`DEPENDENCIES.json` records the OpenSSL build version and accepted package range.
-Prepare a release manifest with the SRT asset URL:
+The same repository holds the build scripts, Swift package, version tags, and
+GitHub Release assets. The build creates `libsrt.xcframework`, its ZIP,
+and a `.sha256` file, including bundled-component licenses and metadata.
 
-```sh
-./prepare-release.sh https://github.com/YOUR_OWNER/libsrt-xcframework/releases/download/v1.5.7
-```
+### Release from GitHub Actions (recommended)
 
-The generated `dist/Package.swift` preserves the upstream dependency and uses
-the actual SRT ZIP checksum. Use it for the release commit and upload matching
-assets. Keep published assets immutable; use a new tag when replacing an older
-OpenSSL-bundled release. These scripts do not publish releases. No separate
-OpenSSL release or signing certificate needs to be maintained here.
+After this workflow is merged into `main`:
+
+1. Open **Actions → Release XCFramework → Run workflow**.
+2. Select **main** and enter a new package version, such as `1.5.7`.
+3. Press **Run workflow**. A successful run publishes the tag and GitHub Release.
+
+The workflow builds all platforms on an Apple silicon macOS 26 runner with
+Xcode 26.6 and CMake 3.31.10, runs link/runtime/package checks, and generates the
+remote manifest. It creates a release commit from the selected source commit,
+adds the version tag to it, and publishes the ZIP in the same workflow.
+Only the tag is pushed; `main` stays on its development manifest. Consumers
+select the published version tag, not the `main` branch.
+
+The input is the **package distribution version**, not a request to fetch a
+different upstream version. Update the pinned libsrt version and its
+metadata in a reviewed commit before releasing a new upstream version.
+Only stable versions are accepted (`1.5.7` or `v1.5.7`). Existing tags and
+releases (including drafts) are rejected before building. Runs are serialized.
+The workflow uses the built-in `GITHUB_TOKEN` with `contents: write`; no personal
+access token or signing secret is needed for this static XCFramework. Repository
+or organization rules must allow Actions to create release tags and releases.
+
+Before pushing the tag, the workflow saves a `release-vVERSION` artifact for
+30 days containing the exact ZIP, checksum, and generated manifest. If publication
+fails after the tag was pushed, do **not** rebuild or move the tag: download that
+artifact, check out the existing tag, restore the ZIP/checksum at the repository
+root, and run `./build.sh publish TAG`. If a draft or partial Release already
+exists, inspect and complete it using the saved files rather than rerunning the
+whole workflow or overwriting published assets.
+
+### Release from your Mac
+
+1. Run `./build.sh` and `./build.sh verify`.
+2. Run `./build.sh release v1.5.7` (choose a new, unused version tag).
+   This computes the ZIP checksum and writes a remote binary target directly
+   to the root `Package.swift`, with a copy in `dist/Package.swift`.
+3. Review and commit the release changes, including `Package.swift`, and merge
+   if required by your workflow. Tag that exact commit and push the commit/tag:
+
+   ```sh
+   git tag v1.5.7
+   git push origin HEAD
+   git push origin v1.5.7
+   ```
+
+4. From that commit, run `./build.sh publish v1.5.7` to upload the ZIP and its
+   checksum file to this repository's GitHub Releases. This requires an
+   authenticated GitHub CLI (`gh`).
+
+`release` only prepares local files; `publish` is the explicit upload step.
+Publishing checks the manifest URL/checksum, a clean working tree, and matching
+local/remote tags at HEAD. It fails if a release already exists instead of
+replacing its assets. Do not replace existing OpenSSL-bundled assets.
+
+`support/Package.swift` is the development template for both modes. Keep
+platforms, products, and dependencies there. `./build.sh local` restores it to
+the root for local testing; that changes the working tree. Release tags must
+contain the generated remote manifest, never the local one. The initial PR's
+manifest remains local until an actual release is prepared. After release
+preparation, do not rebuild the ZIP without regenerating the manifest and
+committing its new checksum before tagging.
 
 ## Verification
+
+```sh
+./build.sh local
+./build.sh verify
+python3 tests/verify-release.py
+python3 tests/verify-ci-release.py
+```
+
 
 `python3 tests/verify-build.py` checks all ten SRT slices (twelve architecture variants), absence of embedded
 OpenSSL definitions, and Swift linking against the upstream framework. It runs

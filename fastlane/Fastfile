@@ -1,5 +1,5 @@
 lane :build do
   Dir.chdir("..") do
-    sh("./build-clone.sh")
+    sh("./build.sh prepare")
   end
 end

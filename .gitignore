@@ -12,3 +12,5 @@ fastlane/report.xml
 /.build/
 /.swiftpm/
 /dist/
+
+/Package.resolved
