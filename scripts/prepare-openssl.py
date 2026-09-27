@@ -29,6 +29,8 @@ platforms = {
     'iphoneos': 'ios-arm64', 'iphonesimulator': 'ios-arm64_x86_64-simulator',
     'macosx': 'macos-arm64_x86_64', 'macosx_catalyst': 'ios-arm64_x86_64-maccatalyst',
     'appletvos': 'tvos-arm64', 'appletvsimulator': 'tvos-arm64_x86_64-simulator',
+    'watchos': 'watchos-arm64_arm64_32_armv7k',
+    'watchsimulator': 'watchos-arm64_x86_64-simulator',
     'visionos': 'xros-arm64', 'visionsimulator': 'xros-arm64_x86_64-simulator',
 }
 for platform, identifier in platforms.items():

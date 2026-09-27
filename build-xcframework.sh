@@ -29,6 +29,8 @@ xcodebuild -create-xcframework \
     -library ./build/tvos/_OS/libsrt.a -headers Includes \
     -library ./build/macosx/libsrt.a -headers Includes \
     -library ./build/maccatalyst/libsrt.a -headers Includes \
+    -library ./build/watchos/device/libsrt.a -headers Includes \
+    -library ./build/watchos/simulator/libsrt.a -headers Includes \
     -output libsrt.xcframework
 
 

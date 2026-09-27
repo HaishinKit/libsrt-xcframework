@@ -6,7 +6,7 @@
 # This source code is licensed under the BSD 3-Clause License found in the
 # LICENSE file in the root directory of this source tree.
 
-# Shared arm64 static-library build. Requires CMake 3.28+ and Xcode.
+# Shared static-library build. Requires CMake 3.28+ and Xcode.
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 ROOT=$(pwd)
@@ -27,10 +27,11 @@ build_srt() {
   fi
   local build="$ROOT/build/$output"
   local target=${7:-}
+  local arch=${8:-arm64}
   "$CMAKE" -S "$ROOT/srt" -B "$build" \
     -DCMAKE_SYSTEM_NAME="$system" \
     -DCMAKE_OSX_SYSROOT="$(xcrun --sdk "$sdk" --show-sdk-path)" \
-    -DCMAKE_OSX_ARCHITECTURES=arm64 \
+    -DCMAKE_OSX_ARCHITECTURES="$arch" \
     -DCMAKE_OSX_DEPLOYMENT_TARGET="$minimum" \
     -DCMAKE_C_COMPILER_TARGET="$target" \
     -DCMAKE_CXX_COMPILER_TARGET="$target" \

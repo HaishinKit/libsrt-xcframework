@@ -6,14 +6,18 @@ This project is maintained for HaishinKit and can also be used independently.
 
 ## Platforms
 
-| iOS | tvOS | macOS | visionOS | Mac Catalyst |
-|---|---|---|---|---|
-| 13.0+ | 13.0+ | 11.0+ | 1.3+ | 14.0+ (macOS 11+) |
+| iOS | tvOS | macOS | visionOS | Mac Catalyst | watchOS |
+|---|---|---|---|---|---|
+| 13.0+ | 13.0+ | 11.0+ | 1.3+ | 14.0+ (macOS 11+) | 8.0+ (arm64_32 / armv7k) / 26.0+ (arm64) |
 
-SRT slices are arm64. iOS and tvOS simulators require 14.0+.
-OpenSSL-Package also supports watchOS, but this SRT package does not yet
-include watchOS or Intel slices. The visionOS minimum follows the dependency's
-SwiftPM manifest.
+SRT includes ten slices and twelve architecture variants. watchOS devices
+use a universal arm64 + arm64_32 + armv7k library; the watchOS simulator is arm64 with
+an 8.0 minimum. The other platforms are arm64; iOS and tvOS simulators require
+14.0+. Intel slices are not included. The visionOS minimum follows
+the dependency's SwiftPM manifest. Xcode 26 requires a 26.0 deployment target
+for the watchOS arm64 device ABI; arm64_32 and armv7k retain the older deployment target.
+watchOS has been cross-compiled and link-tested; on-watch runtime/networking
+and application archive validation remain to be performed.
 
 ## OpenSSL dependency
 
@@ -50,6 +54,7 @@ python3 scripts/prepare-openssl.py
 ./build-macos.sh
 ./build-maccatalyst.sh
 ./build-visionos.sh
+./build-watchos.sh
 ./build-xcframework.sh
 ```
 
@@ -103,11 +108,20 @@ OpenSSL release or signing certificate needs to be maintained here.
 
 ## Verification
 
-`python3 tests/verify-build.py` checks all eight SRT slices, absence of embedded
+`python3 tests/verify-build.py` checks all ten SRT slices (twelve architecture variants), absence of embedded
 OpenSSL definitions, and Swift linking against the upstream framework. It runs
 AES-256 encrypted loopback checks on macOS and Mac Catalyst, including an actual
 OpenSSL runtime-version assertion. Local socket access is required. Device and
 simulator runtime tests remain separate.
+
+The SwiftPM wrapper can also be checked with Xcode for watchOS:
+
+```sh
+xcodebuild -scheme libsrt -destination 'generic/platform=watchOS' \
+  -derivedDataPath build/watchos-package CODE_SIGNING_ALLOWED=NO build
+```
+
+This builds the package; it does not run an app on a Watch.
 
 `tests/verify-package.sh` resolves the real upstream Swift package and runs a
 minimal consumer, checking transitive OpenSSL and C++ linkage. To reproduce
