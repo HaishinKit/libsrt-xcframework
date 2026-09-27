@@ -14,16 +14,16 @@ SRT_VERSION=v1.5.7
 checkout_dependency() {
   local directory=$1 url=$2 revision=$3
   if [ ! -d "$directory" ]; then
-    git clone --depth 1 "$url" "$directory"
+    git clone --branch "$revision" --depth 1 "$url" "$directory"
   fi
   if [ -n "$(git -C "$directory" status --porcelain)" ]; then
     echo "Local changes in $directory; commit or stash them before updating." >&2
     exit 1
   fi
-  if ! git -C "$directory" rev-parse --verify "$revision^{commit}" >/dev/null 2>&1; then
-    git -C "$directory" fetch --depth 1 origin "$revision"
+  if ! git -C "$directory" rev-parse --verify "refs/tags/$revision^{commit}" >/dev/null 2>&1; then
+    git -C "$directory" fetch --depth 1 origin "refs/tags/$revision:refs/tags/$revision"
   fi
-  git -C "$directory" checkout --detach "$revision"
+  git -C "$directory" checkout --detach "refs/tags/$revision"
 }
 
 checkout_dependency srt https://github.com/Haivision/srt.git "$SRT_VERSION"

@@ -46,6 +46,9 @@ jobs:
           xcodebuild -version
           test "$(uname -m)" = arm64
 
+      - name: Verify clean-checkout preparation
+        run: python3 tests/verify-clone.py
+
       - name: Build all platforms
         run: ./build.sh
 
