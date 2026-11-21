@@ -18,6 +18,8 @@ concurrency:
 
 jobs:
   release:
+    outputs:
+      published-tag: ${{ steps.publish-release.outcome == 'success' && steps.version.outputs.tag || '' }}
     if: github.repository == 'HaishinKit/libsrt-xcframework' && github.ref == 'refs/heads/main'
     runs-on: macos-26
     timeout-minutes: 120
@@ -93,6 +95,7 @@ jobs:
           git push origin "refs/tags/$RELEASE_TAG"
 
       - name: Publish the GitHub Release
+        id: publish-release
         env:
           RELEASE_TAG: ${{ steps.version.outputs.tag }}
         run: ./build.sh publish "$RELEASE_TAG"
@@ -101,3 +104,15 @@ jobs:
         env:
           RELEASE_TAG: ${{ steps.version.outputs.tag }}
         run: echo "Published https://github.com/HaishinKit/libsrt-xcframework/releases/tag/$RELEASE_TAG" >> "$GITHUB_STEP_SUMMARY"
+
+  close-milestone:
+    # Publication can succeed even if a later documentation or summary step fails.
+    needs: release
+    if: ${{ always() && needs.release.outputs.published-tag != '' }}
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    uses: HaishinKit/.github/.github/workflows/milestones.yml@main
+    with:
+      release-tag: ${{ needs.release.outputs.published-tag }}
